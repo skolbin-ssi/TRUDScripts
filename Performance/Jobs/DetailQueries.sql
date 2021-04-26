@@ -1,3 +1,11 @@
+--Same batch jobs
+SELECT BATCHJOB.caption, classNumber, a.COMPANY, BATCHJOB.ORIGSTARTDATETIME FROM BATCH a
+inner join BATCHJOB on BATCHJOB.RECID = A.BATCHJOBID
+WHERE classNumber IN (SELECT classNumber FROM BATCH B WHERE B.BATCHJOBID != A.BATCHJOBID and B.CLASSNUMBER = A.CLASSNUMBER AND A.PARAMETERS = B.PARAMETERS
+					AND A.COMPANY = B.COMPANY AND b.STATUS <> 4 AND b.STATUS <> 0)
+AND a.STATUS <> 4 --Finished
+AND a.STATUS <> 0 --OnHold
+
 
 -- Volume info for all LUNS that have database files on the current instance (Query 26) (Volume Info)
 SELECT DISTINCT vs.volume_mount_point, vs.file_system_type, vs.logical_volume_name, 
