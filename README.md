@@ -48,3 +48,19 @@ https://ax.docentric.com/import-export-container-data-fields-using-d365fo-data-m
 ## D365 F&SCM Custom services
 
 https://zaorfr.hashnode.dev/d365-fo-custom-services
+
+## Sign up for preview subscriptions
+
+https://docs.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/dev-tools/sign-up-preview-subscription
+
+## Dynamics 365 Implementation Guide                 
+
+https://community.dynamics.com/365/dynamics-365-fasttrack/p/dynamics365implementationguide
+
+## ON-Premises links
+
+[On-premises certificate rotation](https://community.dynamics.com/ax/b/axinthefield/posts/on-premises-certificate-rotation)
+
+[Installation changes for On-Premises environments platform 41 and later](https://community.dynamics.com/ax/b/axinthefield/posts/installation-changes-for-on-premises-environments-platform-41-and-later)
+
+[Path to One Version: In-Place Upgrade from within the VHD](https://community.dynamics.com/ax/b/axinthefield/posts/path-to-one-version-in-place-upgrade)
