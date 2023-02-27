@@ -50,6 +50,10 @@ Start-D365Environment -OnlyStartTypeAutomatic -ShowOriginalProgress
 CREATE USER [axdbadmin] FOR LOGIN [axdbadmin2] WITH DEFAULT_SCHEMA=[dbo]
 ALTER DATABASE [GOLDEN] SET AUTO_CLOSE OFF WITH NO_WAIT
 
+$RelocateData = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile("AXDBBuild_Data", "F:\MSSQL_DATA\AxDB_20230125.mdf")
+$RelocateLog = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile("AXDBBuild_Log", "G:\MSSQL_LOGS\AxDB_20230125.ldf")
+Restore-SqlDatabase -ServerInstance "." -Database "AxDB_20230125" -BackupFile "I:\MSSQL_BACKUP\AxDB_20230125.bak" -RelocateFile @($RelocateData,$RelocateLog)
+
 Get-D365Url
 
 #TRANSFER TO TIER2
@@ -114,6 +118,35 @@ Import-D365AadUser -Users test@e-s.dk
 #---------------------------------
 https://dev01f5f85473588b3ae9devaos.axcloud.dynamics.com/?mi=SysClassRunner&prt=initial&cls=DEVPopulateReports
 
+#INSTALL SOFTWARE PACKAGE
+#---------------------------------
+Invoke-D365SDPInstall -Path C:\AAA\Finance_10_28 -Command RunAll -Verbose
+#Invoke-D365SDPInstall -Path C:\AAA\Finance_10_28 -Command ReRunStep -Step 25 -Verbose
+#---------------------------------
 
+#SQL SNAPSHOT CREATE AND RESTORE
+#---------------------------------
+--Create snapshot
+CREATE DATABASE AxDB_MyReserveCase ON  
+( NAME = UAT2022_1124, FILENAME =   
+'J:\MSSQL_BACKUP\AxDB_MyReserveCase.ss' )  
+AS SNAPSHOT OF AxDB;  
+ 
+--Restore from snapshot
+ALTER DATABASE AxDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE AxDB from   
+DATABASE_SNAPSHOT = 'AxDB_MyReserveCase';  
+ALTER DATABASE AxDB SET MULTI_USER;
 
-
+#----------------------------------------
+#RESTORE REPLY URL
+# Using tenant admin account under this tenant login to via AzureAD PowerShell cmdlet. 
+Install-Module AzureAD
+Connect-AzureAD 
+# Get Service Principal details 
+$SP = Get-AzureADServicePrincipal -Filter "AppId eq '00000015-0000-0000-c000-000000000000'" ##REPLACE AAD REALM VALUE WITH VALUE IN AOS SERVICE UNDER WEB CONFIG
+#Add Reply URLs 
+$SP.ReplyUrls.Add("https://xxxc099devaos.axcloud.dynamics.com") #REPLACE ENV URL WITH ENV URL UNDER INFRA URL IN AOS SERVICE
+$SP.ReplyUrls.Add("https://xxxc099devaos.axcloud.dynamics.com/oauth") ##DO NOT REMOVE THE /OAUTH JUST REPLACE THE ENV URL
+#Set/Update Reply URL 
+Set-AzureADServicePrincipal -ObjectId $SP.ObjectId -ReplyUrls $SP.ReplyUrls
