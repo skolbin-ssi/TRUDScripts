@@ -44,7 +44,8 @@ Invoke-D365AzureStorageDownload -AccountId "sharedwe" -AccessToken "iYMomVkAUrYX
 #----------------------------
 Stop-D365Environment -All
 Restore-SqlDatabase -ServerInstance "." -Database "testDB" -BackupFile "c:\sql\testDB.bak"
-Switch-D365ActiveDatabase -NewDatabaseName "GOLDEN"
+invoke-sqlcmd -ServerInstance "."  -Query "IF DB_ID('AxDB_original') IS NOT NULL BEGIN ALTER DATABASE AxDB_original set single_user with rollback immediate; DROP DATABASE AxDB_original; END;" -TrustServerCertificate
+Switch-D365ActiveDatabase -NewDatabaseName "testDB"
 Invoke-D365DBSync -ShowOriginalProgress
 Start-D365Environment -OnlyStartTypeAutomatic -ShowOriginalProgress
 #----------------------------
@@ -78,7 +79,7 @@ foreach ($model in Get-D365Model -CustomizableOnly -ExcludeMicrosoftModels -Excl
 #----------------------------------------------------------------------------------
 #RESTORE TIER2 TO TIER1
 #Invoke-D365InstallAzCopy
-#Invoke-D365InstallSqlPackage
+#Invoke-D365InstallSqlPackage -url "https://go.microsoft.com/fwlink/?linkid=2261576"
 
 $fileDB = "UAT_" + (Get-Date -Format "yyyy_MM_dd")
 $filePath = "I:\MSSQL_BACKUP\" + $fileDB
@@ -99,16 +100,17 @@ Import-D365Bacpac  -BacpacFile $filePathpac -ImportModeTier1 -NewDatabaseName $f
 $RunTime = New-TimeSpan -Start $StartTime -End (get-date) 
 WRITE-HOST "Execution time was $($RunTime.Hours) hours, $($RunTime.Minutes) minutes, $($RunTime.Seconds) seconds" 
 
-Invoke-Sqlcmd -ServerInstance "." -Database $fileDB -Query "update userinfo set enable= 1"  -Verbose
-Invoke-Sqlcmd -ServerInstance "." -Database "master" -Query ("ALTER DATABASE [" + $fileDB+ "] SET RECOVERY SIMPLE WITH NO_WAIT")  -Verbose
+Invoke-Sqlcmd -ServerInstance "." -Database $fileDB -Query "update userinfo set enable= 1"  -Verbose -TrustServerCertificate
+Invoke-Sqlcmd -ServerInstance "." -Database "master" -Query ("ALTER DATABASE [" + $fileDB+ "] SET RECOVERY SIMPLE WITH NO_WAIT")  -Verbose -TrustServerCertificate
 
 Stop-D365Environment -All
 
-Backup-SqlDatabase -ServerInstance "." -Database "AxDB" -BackupFile ("I:\MSSQL_BACKUP\AxDBOld" + (Get-Date -Format "yyyyMMdd") + ".bak")  -CopyOnly -CompressionOption On -Initialize -NoRewind 
+Backup-SqlDatabase -ServerInstance "." -Database "AxDB" -BackupFile ("I:\MSSQL_BACKUP\AxDBOld" + (Get-Date -Format "yyyyMMdd") + ".bak")  -CopyOnly -CompressionOption On -Initialize -NoRewind  -TrustServerCertificate
 #invoke-sqlcmd -ServerInstance "."  -Query "alter database AxDB set single_user with rollback immediate; Drop database AxDB;"
-invoke-sqlcmd -ServerInstance "."  -Query "IF DB_ID('AxDB_original') IS NOT NULL BEGIN ALTER DATABASE AxDB_original set single_user with rollback immediate; DROP DATABASE AxDB_original; END;"
+invoke-sqlcmd -ServerInstance "."  -Query "IF DB_ID('AxDB_original') IS NOT NULL BEGIN ALTER DATABASE AxDB_original set single_user with rollback immediate; DROP DATABASE AxDB_original; END;"  -TrustServerCertificate
 
 Switch-D365ActiveDatabase -NewDatabaseName $fileDB
+Invoke-Sqlcmd -Database AxDB -ServerInstance "." -Query "UPDATE SystemParameters SET ODataBuildMetadataCacheOnAosStartup = 0" -TrustServerCertificate
 Invoke-D365DBSync -ShowOriginalProgress
 Start-D365Environment -OnlyStartTypeAutomatic -ShowOriginalProgress
 Invoke-D365DataFlush -Class SysFlushData
@@ -126,7 +128,7 @@ https://dev01f5f85473588b3ae9devaos.axcloud.dynamics.com/?mi=SysClassRunner&prt=
 
 #INSTALL SOFTWARE PACKAGE
 #---------------------------------
-Invoke-D365SDPInstall -Path C:\AAA\Finance_10_28 -Command RunAll -Verbose
+Invoke-D365SDPInstall -Path C:\AAA\Finance_10_28 -Command RunAll -Verbose -RunbookId 'Update411'
 #Invoke-D365SDPInstall -Path C:\AAA\Finance_10_28 -Command ReRunStep -Step 25 -Verbose
 #---------------------------------
 
@@ -162,3 +164,4 @@ Set-AzureADServicePrincipal -ObjectId $SP.ObjectId -ReplyUrls $SP.ReplyUrls
 cd C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer
 tf workspaces /owner:* /computer:devb5add42
 tf workspace /delete /collection:https://dev.azure.com/allclient "devb5add-1;Denis"
+#https://stackoverflow.com/questions/28298771/how-to-remove-tfs-workspace-mapping-for-another-user
